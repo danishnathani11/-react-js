@@ -1,50 +1,38 @@
 import { useState } from 'react';
-import { MessageCircle } from 'lucide-react';
 import FeedbackForm from './components/FeedbackForm';
 import FeedbackList from './components/FeedbackList';
 
 function App() {
   const [feedbacks, setFeedbacks] = useState([]);
 
-  const handleSubmitFeedback = (feedback) => {
-    setFeedbacks(prev => [feedback, ...prev]);
+  const handleSubmitFeedback = (feedbackData) => {
+    setFeedbacks(prev => [feedbackData, ...prev]);
+
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth'
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <header className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <MessageCircle size={32} className="text-white" />
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">
-            Customer Feedback System
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Help us improve by sharing your experience, reporting issues, and suggesting enhancements
+    <div className="app-container">
+      <header className="app-header">
+        <div className="header-content">
+          <h1 className="app-title">Customer Feedback & Issue Reporting System</h1>
+          <p className="app-subtitle">
+            Help us improve by sharing your feedback, reporting bugs, or suggesting new features
           </p>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="lg:sticky lg:top-8 h-fit">
-            <FeedbackForm onSubmit={handleSubmitFeedback} />
-          </div>
-
-          <div>
-            <FeedbackList feedbacks={feedbacks} />
-          </div>
         </div>
+      </header>
 
-        <footer className="mt-16 text-center pb-8">
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-md">
-            <span className="text-sm text-gray-600">
-              Built with React • Professional Form Handling • Real-time Updates
-            </span>
-          </div>
-        </footer>
-      </div>
+      <main className="main-content">
+        <FeedbackForm onSubmitFeedback={handleSubmitFeedback} />
+        <FeedbackList feedbacks={feedbacks} />
+      </main>
+
+      <footer className="app-footer">
+        <p>&copy; 2025 Customer Feedback System. All rights reserved.</p>
+      </footer>
     </div>
   );
 }

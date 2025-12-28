@@ -1,62 +1,62 @@
-import { Plus, X } from 'lucide-react';
+import { useState } from 'react';
 
-function DynamicList({ title, items, onChange, placeholder }) {
-  const addItem = () => {
-    onChange([...items, '']);
+function DynamicList({ label, items, onItemsChange, placeholder }) {
+  const [inputValue, setInputValue] = useState('');
+
+  const handleAdd = () => {
+    if (inputValue.trim()) {
+      onItemsChange([...items, inputValue.trim()]);
+      setInputValue('');
+    }
   };
 
-  const removeItem = (index) => {
-    onChange(items.filter((_, i) => i !== index));
+  const handleRemove = (index) => {
+    onItemsChange(items.filter((_, i) => i !== index));
   };
 
-  const updateItem = (index, value) => {
-    const newItems = [...items];
-    newItems[index] = value;
-    onChange(newItems);
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAdd();
+    }
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="block text-sm font-semibold text-gray-700">
-          {title}
-        </label>
+    <div className="dynamic-list">
+      <label className="form-label">{label}</label>
+      <div className="dynamic-list-input-group">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder={placeholder}
+          className="form-input"
+        />
         <button
           type="button"
-          onClick={addItem}
-          className="flex items-center gap-1 px-3 py-1 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+          onClick={handleAdd}
+          className="btn-add"
         >
-          <Plus size={16} />
-          Add
+          + Add
         </button>
       </div>
-
-      <div className="space-y-2">
-        {items.length === 0 ? (
-          <p className="text-sm text-gray-500 italic py-2">
-            No items added yet. Click "Add" to get started.
-          </p>
-        ) : (
-          items.map((item, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="text"
-                value={item}
-                onChange={(e) => updateItem(index, e.target.value)}
-                placeholder={`${placeholder} ${index + 1}`}
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
+      {items.length > 0 && (
+        <ul className="dynamic-list-items">
+          {items.map((item, index) => (
+            <li key={index} className="dynamic-list-item">
+              <span>{item}</span>
               <button
                 type="button"
-                onClick={() => removeItem(index)}
-                className="px-3 py-2.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                onClick={() => handleRemove(index)}
+                className="btn-remove"
               >
-                <X size={18} />
+                × Remove
               </button>
-            </div>
-          ))
-        )}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

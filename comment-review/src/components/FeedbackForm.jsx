@@ -1,53 +1,64 @@
 import { useState, useRef } from 'react';
-import { Send } from 'lucide-react';
 import DynamicList from './DynamicList';
 
-function FeedbackForm({ onSubmit }) {
+function FeedbackForm({ onSubmitFeedback }) {
   const [formData, setFormData] = useState({
-    fullName: '',
+    name: '',
     email: '',
     category: '',
     priority: '',
-    description: '',
-    steps: [],
-    suggestions: []
+    description: ''
   });
 
+  const [steps, setSteps] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
   const screenshotRef = useRef(null);
   const notesRef = useRef(null);
 
+  const categories = ['Bug', 'Suggestion', 'Complaint', 'Other'];
+  const priorities = ['Low', 'Medium', 'High'];
+
   const validateField = (name, value) => {
+    let error = '';
+
     switch (name) {
-      case 'fullName':
-        if (!value.trim()) return 'Full name is required';
-        if (value.trim().length < 2) return 'Name must be at least 2 characters';
-        return '';
-
+      case 'name':
+        if (!value.trim()) {
+          error = 'Name is required';
+        }
+        break;
       case 'email':
-        if (!value.trim()) return 'Email is required';
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) return 'Please enter a valid email';
-        return '';
-
+        if (!value.trim()) {
+          error = 'Email is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          error = 'Invalid email format';
+        }
+        break;
       case 'category':
-        if (!value) return 'Please select a category';
-        return '';
-
+        if (!value) {
+          error = 'Please select a category';
+        }
+        break;
       case 'priority':
-        if (!value) return 'Please select a priority level';
-        return '';
-
+        if (!value) {
+          error = 'Please select a priority';
+        }
+        break;
       case 'description':
-        if (!value.trim()) return 'Description is required';
-        if (value.trim().length < 10) return 'Description must be at least 10 characters';
-        return '';
-
+        if (!value.trim()) {
+          error = 'Description is required';
+        } else if (value.trim().length < 10) {
+          error = 'Description must be at least 10 characters';
+        }
+        break;
       default:
-        return '';
+        break;
     }
+
+    return error;
   };
 
   const handleChange = (e) => {
@@ -55,68 +66,62 @@ function FeedbackForm({ onSubmit }) {
     setFormData(prev => ({ ...prev, [name]: value }));
 
     if (touched[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: validateField(name, value)
-      }));
+      const error = validateField(name, value);
+      setErrors(prev => ({ ...prev, [name]: error }));
     }
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-    setErrors(prev => ({
-      ...prev,
-      [name]: validateField(name, value)
-    }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const validateForm = () => {
     const newErrors = {};
     Object.keys(formData).forEach(key => {
-      if (key !== 'steps' && key !== 'suggestions') {
-        const error = validateField(key, formData[key]);
-        if (error) newErrors[key] = error;
-      }
+      const error = validateField(key, formData[key]);
+      if (error) newErrors[key] = error;
     });
-    return newErrors;
+    setErrors(newErrors);
+    setTouched({
+      name: true,
+      email: true,
+      category: true,
+      priority: true,
+      description: true
+    });
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const newErrors = validateForm();
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setTouched({
-        fullName: true,
-        email: true,
-        category: true,
-        priority: true,
-        description: true
-      });
+    if (!validateForm()) {
       return;
     }
 
-    const submission = {
+    const feedbackData = {
       ...formData,
       screenshot: screenshotRef.current.value,
       notes: notesRef.current.value,
-      timestamp: new Date().toISOString(),
-      id: Date.now()
+      steps,
+      suggestions,
+      timestamp: new Date().toISOString()
     };
 
-    onSubmit(submission);
+    onSubmitFeedback(feedbackData);
 
     setFormData({
-      fullName: '',
+      name: '',
       email: '',
       category: '',
       priority: '',
-      description: '',
-      steps: [],
-      suggestions: []
+      description: ''
     });
+    setSteps([]);
+    setSuggestions([]);
     setErrors({});
     setTouched({});
     screenshotRef.current.value = '';
@@ -124,187 +129,171 @@ function FeedbackForm({ onSubmit }) {
   };
 
   const isFormValid = () => {
-    return Object.keys(validateForm()).length === 0;
+    return Object.keys(formData).every(key => {
+      const error = validateField(key, formData[key]);
+      return !error;
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
-      <div className="border-b border-gray-200 pb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Submit Feedback</h2>
-        <p className="text-sm text-gray-600 mt-1">
-          Help us improve by sharing your experience
-        </p>
-      </div>
+    <div className="feedback-form-container">
+      <h2 className="form-title">Submit Feedback or Report an Issue</h2>
+      <form onSubmit={handleSubmit} className="feedback-form">
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="name" className="form-label">
+              Full Name <span className="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={`form-input ${errors.name && touched.name ? 'error' : ''}`}
+              placeholder="Enter your full name"
+            />
+            {errors.name && touched.name && (
+              <span className="error-message">{errors.name}</span>
+            )}
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">
-            Full Name <span className="text-red-500">*</span>
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">
+              Email Address <span className="required">*</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={`form-input ${errors.email && touched.email ? 'error' : ''}`}
+              placeholder="your.email@example.com"
+            />
+            {errors.email && touched.email && (
+              <span className="error-message">{errors.email}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="category" className="form-label">
+              Issue Category <span className="required">*</span>
+            </label>
+            <select
+              id="category"
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={`form-input ${errors.category && touched.category ? 'error' : ''}`}
+            >
+              <option value="">Select a category</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            {errors.category && touched.category && (
+              <span className="error-message">{errors.category}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="priority" className="form-label">
+              Priority Level <span className="required">*</span>
+            </label>
+            <select
+              id="priority"
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={`form-input ${errors.priority && touched.priority ? 'error' : ''}`}
+            >
+              <option value="">Select priority</option>
+              {priorities.map(pri => (
+                <option key={pri} value={pri}>{pri}</option>
+              ))}
+            </select>
+            {errors.priority && touched.priority && (
+              <span className="error-message">{errors.priority}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="description" className="form-label">
+            Detailed Description <span className="required">*</span>
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            rows="5"
+            className={`form-input ${errors.description && touched.description ? 'error' : ''}`}
+            placeholder="Please provide a detailed description of your feedback or issue..."
+          />
+          {errors.description && touched.description && (
+            <span className="error-message">{errors.description}</span>
+          )}
+        </div>
+
+        <DynamicList
+          label="Steps to Reproduce (Optional)"
+          items={steps}
+          onItemsChange={setSteps}
+          placeholder="Add a step..."
+        />
+
+        <DynamicList
+          label="Suggested Improvements (Optional)"
+          items={suggestions}
+          onItemsChange={setSuggestions}
+          placeholder="Add a suggestion..."
+        />
+
+        <div className="form-group">
+          <label htmlFor="screenshot" className="form-label">
+            Screenshot URL (Optional)
           </label>
           <input
-            type="text"
-            id="fullName"
-            name="fullName"
-            value={formData.fullName}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all ${
-              errors.fullName && touched.fullName ? 'border-red-500 bg-red-50' : 'border-gray-300'
-            }`}
-            placeholder="John Doe"
+            type="url"
+            id="screenshot"
+            ref={screenshotRef}
+            className="form-input"
+            placeholder="https://example.com/screenshot.png"
           />
-          {errors.fullName && touched.fullName && (
-            <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>
-          )}
+          <small className="form-hint">Provide a URL to a screenshot if available</small>
         </div>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-            Email Address <span className="text-red-500">*</span>
+        <div className="form-group">
+          <label htmlFor="notes" className="form-label">
+            Additional Notes (Optional)
           </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all ${
-              errors.email && touched.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
-            }`}
-            placeholder="john@example.com"
+          <textarea
+            id="notes"
+            ref={notesRef}
+            rows="3"
+            className="form-input"
+            placeholder="Any other information you'd like to share..."
           />
-          {errors.email && touched.email && (
-            <p className="text-red-600 text-sm mt-1">{errors.email}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-2">
-            Issue Category <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="category"
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all ${
-              errors.category && touched.category ? 'border-red-500 bg-red-50' : 'border-gray-300'
-            }`}
-          >
-            <option value="">Select a category</option>
-            <option value="bug">Bug Report</option>
-            <option value="suggestion">Suggestion</option>
-            <option value="complaint">Complaint</option>
-            <option value="other">Other</option>
-          </select>
-          {errors.category && touched.category && (
-            <p className="text-red-600 text-sm mt-1">{errors.category}</p>
-          )}
         </div>
 
-        <div>
-          <label htmlFor="priority" className="block text-sm font-semibold text-gray-700 mb-2">
-            Priority Level <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="priority"
-            name="priority"
-            value={formData.priority}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all ${
-              errors.priority && touched.priority ? 'border-red-500 bg-red-50' : 'border-gray-300'
-            }`}
-          >
-            <option value="">Select priority</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-          {errors.priority && touched.priority && (
-            <p className="text-red-600 text-sm mt-1">{errors.priority}</p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
-          Detailed Description <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          rows={4}
-          className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none ${
-            errors.description && touched.description ? 'border-red-500 bg-red-50' : 'border-gray-300'
-          }`}
-          placeholder="Please describe your issue or feedback in detail..."
-        />
-        {errors.description && touched.description && (
-          <p className="text-red-600 text-sm mt-1">{errors.description}</p>
-        )}
-      </div>
-
-      <DynamicList
-        title="Steps to Reproduce"
-        items={formData.steps}
-        onChange={(steps) => setFormData(prev => ({ ...prev, steps }))}
-        placeholder="Step"
-      />
-
-      <DynamicList
-        title="Suggested Improvements"
-        items={formData.suggestions}
-        onChange={(suggestions) => setFormData(prev => ({ ...prev, suggestions }))}
-        placeholder="Suggestion"
-      />
-
-      <div>
-        <label htmlFor="screenshot" className="block text-sm font-semibold text-gray-700 mb-2">
-          Screenshot URL (Optional)
-        </label>
-        <input
-          type="url"
-          id="screenshot"
-          ref={screenshotRef}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-          placeholder="https://example.com/screenshot.png"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="notes" className="block text-sm font-semibold text-gray-700 mb-2">
-          Additional Notes (Optional)
-        </label>
-        <textarea
-          id="notes"
-          ref={notesRef}
-          rows={3}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
-          placeholder="Any other information you'd like to share..."
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={!isFormValid()}
-        className={`w-full py-3.5 px-6 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all ${
-          isFormValid()
-            ? 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
-            : 'bg-gray-300 cursor-not-allowed'
-        }`}
-      >
-        <Send size={20} />
-        Submit Feedback
-      </button>
-    </form>
+        <button
+          type="submit"
+          className="btn-submit"
+          disabled={!isFormValid()}
+        >
+          Submit Feedback
+        </button>
+      </form>
+    </div>
   );
 }
 
